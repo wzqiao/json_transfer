@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sub2Api Account Payload Builder</title>
+    <style>
+      :root {
+        --bg-a: #5c77e8;
+        --bg-b: #744ab2;
+        --ink: #222638;
+        --muted: #6f7890;
+        --panel: #ffffff;
+        --panel-soft: #eef7ff;
+        --line: #dde3ee;
+        --primary: #5b72e8;
+        --primary-dark: #475ccc;
+        --green: #43b86b;
+        --slate: #94a1b2;
+        --danger: #d94c4c;
+        --shadow: 0 22px 60px rgba(34, 38, 56, 0.2);
+        font-family:
+          ui-sans-serif,
+          "Microsoft YaHei",
+          "PingFang SC",
+          "Noto Sans CJK SC",
+          sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at 14% 12%, rgba(255, 255, 255, 0.24), transparent 28rem),
+          linear-gradient(135deg, var(--bg-a), var(--bg-b));
+      }
+
+      main {
+        width: min(1140px, calc(100% - 32px));
+        margin: 0 auto;
+        padding: 34px 0 46px;
+      }
+
+      header {
+        color: #fff;
+        text-align: center;
+        margin-bottom: 24px;
+      }
+
+      header h1 {
+        margin: 0 0 8px;
+        font-size: clamp(28px, 5vw, 48px);
+        letter-spacing: 0.04em;
+      }
+
+      header p {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.86);
+      }
+
+      .card {
+        background: var(--panel);
+        border-radius: 18px;
+        box-shadow: var(--shadow);
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 14px;
+        padding: 24px;
+        margin-bottom: 24px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+
+      .field.span-2 {
+        grid-column: span 2;
+      }
+
+      label {
+        font-size: 14px;
+        font-weight: 800;
+        color: #303548;
+      }
+
+      input,
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        color: var(--ink);
+        background: #fff;
+        font: inherit;
+        outline: none;
+      }
+
+      input,
+      select {
+        min-height: 44px;
+        padding: 0 14px;
+      }
+
+      textarea {
+        min-height: 360px;
+        resize: vertical;
+        padding: 16px;
+        line-height: 1.55;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(91, 114, 232, 0.16);
+      }
+
+      .hint {
+        grid-column: 1 / -1;
+        padding: 16px 18px;
+        color: #28486b;
+        background: var(--panel-soft);
+        border-left: 5px solid var(--primary);
+        border-radius: 10px;
+        line-height: 1.7;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 24px;
+      }
+
+      .workspace {
+        padding: 24px;
+      }
+
+      .title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin: 0 0 18px;
+      }
+
+      .title h2 {
+        margin: 0;
+        font-size: 25px;
+      }
+
+      .badge {
+        color: #fff;
+        background: var(--primary);
+        border-radius: 999px;
+        padding: 5px 11px;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .dropzone {
+        display: grid;
+        place-items: center;
+        min-height: 190px;
+        padding: 22px;
+        border: 2px dashed #b7c2dc;
+        border-radius: 16px;
+        background:
+          linear-gradient(rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.94)),
+          repeating-linear-gradient(45deg, #edf2ff 0 10px, #fff 10px 20px);
+        text-align: center;
+        transition:
+          border-color 0.18s ease,
+          transform 0.18s ease,
+          background 0.18s ease;
+      }
+
+      .dropzone.active {
+        border-color: var(--primary);
+        transform: translateY(-2px);
+        background: #f1f5ff;
+      }
+
+      .dropzone strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 19px;
+      }
+
+      .dropzone span {
+        color: var(--muted);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        padding-top: 18px;
+        margin-top: 18px;
+        border-top: 1px solid #edf0f5;
+      }
+
+      button,
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: 48px;
+        padding: 0 18px;
+        border: 0;
+        border-radius: 10px;
+        color: #fff;
+        background: var(--primary);
+        font: inherit;
+        font-weight: 800;
+        cursor: pointer;
+        text-decoration: none;
+        transition:
+          transform 0.16s ease,
+          background 0.16s ease,
+          opacity 0.16s ease;
+      }
+
+      button:hover,
+      .button:hover {
+        background: var(--primary-dark);
+        transform: translateY(-1px);
+      }
+
+      button.secondary {
+        background: var(--slate);
+      }
+
+      button.success,
+      .button.success {
+        background: var(--green);
+      }
+
+      button.danger {
+        background: var(--danger);
+      }
+
+      button:disabled,
+      .button.disabled {
+        cursor: not-allowed;
+        opacity: 0.52;
+        transform: none;
+      }
+
+      .file-list {
+        min-height: 68px;
+        margin-top: 16px;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        color: var(--muted);
+        background: #fbfcff;
+        line-height: 1.65;
+        word-break: break-all;
+      }
+
+      .status {
+        margin-top: 12px;
+        min-height: 24px;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      .status.error {
+        color: var(--danger);
+      }
+
+      .paste-area {
+        min-height: 190px;
+        margin-top: 16px;
+      }
+
+      .result {
+        min-height: 520px;
+        background: #f8fafc;
+        font-family:
+          "Cascadia Mono",
+          "JetBrains Mono",
+          Consolas,
+          monospace;
+        font-size: 13px;
+      }
+
+      .footer {
+        margin-top: 20px;
+        color: rgba(255, 255, 255, 0.78);
+        text-align: center;
+        font-size: 14px;
+      }
+
+      @media (max-width: 900px) {
+        .toolbar,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .field.span-2 {
+          grid-column: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Token JSON 转 Sub2Api 工具</h1>
+        <p>文件只在浏览器本地处理，不上传服务器；适合直接部署到 GitHub Pages。</p>
+      </header>
+
+      <section class="card toolbar" aria-label="转换配置">
+        <div class="field">
+          <label for="format">输出格式</label>
+          <select id="format">
+            <option value="sub2api">Sub2Api 格式</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="platform">Platform</label>
+          <input id="platform" value="openai" />
+        </div>
+        <div class="field">
+          <label for="accountType">Account Type</label>
+          <input id="accountType" value="oauth" />
+        </div>
+        <div class="field">
+          <label for="concurrency">Concurrency</label>
+          <input id="concurrency" type="number" min="0" value="3" />
+        </div>
+        <div class="field">
+          <label for="priority">Priority</label>
+          <input id="priority" type="number" min="0" value="50" />
+        </div>
+        <div class="field">
+          <label for="nameSource">Name Source</label>
+          <select id="nameSource">
+            <option value="email">email / account_id</option>
+            <option value="filename">filename</option>
+            <option value="index">index</option>
+          </select>
+        </div>
+        <div class="field span-2">
+          <label for="namePrefix">Name Prefix</label>
+          <input id="namePrefix" value="acc" />
+        </div>
+        <div class="field span-2">
+          <label for="outputName">输出文件名</label>
+          <input id="outputName" value="sub2api_accounts_import.json" />
+        </div>
+        <div class="hint">
+          <strong>Sub2Api 格式（完整配置 JSON）</strong><br />
+          生成结构：<code>type/version/exported_at/proxies/accounts</code>。每个输入 JSON 会变成一个 account；如果文件内容是数组，则数组每项都会变成一个 account。
+        </div>
+      </section>
+
+      <section class="grid">
+        <div class="card workspace">
+          <div class="title">
+            <h2>输入 Token 数据</h2>
+            <span id="inputBadge" class="badge">0 files</span>
+          </div>
+
+          <div id="dropzone" class="dropzone">
+            <div>
+              <strong>拖拽 JSON 文件到这里</strong>
+              <span>或点击下面按钮选择多个 token / codex JSON 文件</span>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="chooseFiles" type="button">选择文件</button>
+            <button id="clearInput" type="button" class="secondary">清空</button>
+            <input id="fileInput" type="file" accept=".json,application/json" multiple hidden />
+          </div>
+
+          <div id="fileList" class="file-list">还没有选择文件。</div>
+
+          <label for="pasteInput" style="display: block; margin-top: 18px;">或直接粘贴 JSON</label>
+          <textarea id="pasteInput" class="paste-area" placeholder="可以粘贴单个 JSON 对象，或 JSON 数组。选择文件时这里可以留空。"></textarea>
+
+          <div class="actions">
+            <button id="build" type="button">开始转换</button>
+            <button id="loadExample" type="button" class="success">加载示例</button>
+          </div>
+          <div id="status" class="status"></div>
+        </div>
+
+        <div class="card workspace">
+          <div class="title">
+            <h2>转换结果</h2>
+            <span id="resultBadge" class="badge">0 accounts</span>
+          </div>
+          <textarea id="result" class="result" readonly placeholder="转换结果将显示在这里..."></textarea>
+          <div class="actions">
+            <button id="copy" type="button" class="success" disabled>复制到剪贴板</button>
+            <a id="download" class="button disabled" href="#" download="sub2api_accounts_import.json" aria-disabled="true">下载文件</a>
+            <button id="clearOutput" type="button" class="secondary">清空输出</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="footer">Static HTML tool for GitHub Pages. No upload. No backend.</div>
+    </main>
+
+    <script>
+      const state = {
+        files: [],
+        objectUrl: null,
+      };
+
+      const $ = (id) => document.getElementById(id);
+
+      const elements = {
+        accountType: $("accountType"),
+        build: $("build"),
+        chooseFiles: $("chooseFiles"),
+        clearInput: $("clearInput"),
+        clearOutput: $("clearOutput"),
+        concurrency: $("concurrency"),
+        copy: $("copy"),
+        download: $("download"),
+        dropzone: $("dropzone"),
+        fileInput: $("fileInput"),
+        fileList: $("fileList"),
+        inputBadge: $("inputBadge"),
+        loadExample: $("loadExample"),
+        namePrefix: $("namePrefix"),
+        nameSource: $("nameSource"),
+        outputName: $("outputName"),
+        pasteInput: $("pasteInput"),
+        platform: $("platform"),
+        priority: $("priority"),
+        result: $("result"),
+        resultBadge: $("resultBadge"),
+        status: $("status"),
+      };
+
+      function normalizeRecords(data) {
+        return Array.isArray(data) ? data : [data];
+      }
+
+      function stem(filename) {
+        return filename.replace(/\.[^.]+$/, "");
+      }
+
+      function chooseName(credentials, fileName, index, nameSource, namePrefix) {
+        if (nameSource === "index") {
+          return `${namePrefix}-${String(index).padStart(3, "0")}`;
+        }
+
+        if (nameSource === "email") {
+          const email = String(credentials.email || "").trim();
+          if (email) return email;
+
+          const accountId = String(credentials.account_id || "").trim();
+          if (accountId) return accountId;
+        }
+
+        return stem(fileName);
+      }
+
+      function dedupeName(name, used) {
+        used[name] = (used[name] || 0) + 1;
+        return used[name] === 1 ? name : `${name}-${used[name]}`;
+      }
+
+      function parseNonNegativeInt(value, fieldName) {
+        const parsed = Number.parseInt(value, 10);
+        if (!Number.isFinite(parsed) || parsed < 0) {
+          throw new Error(`${fieldName} 必须是大于等于 0 的整数。`);
+        }
+        return parsed;
+      }
+
+      function setStatus(message, isError = false) {
+        elements.status.textContent = message;
+        elements.status.classList.toggle("error", isError);
+      }
+
+      function refreshFileList() {
+        elements.inputBadge.textContent = `${state.files.length} files`;
+        if (!state.files.length) {
+          elements.fileList.textContent = "还没有选择文件。";
+          return;
+        }
+
+        elements.fileList.innerHTML = state.files
+          .slice()
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((file) => `${escapeHtml(file.name)} <small>(${formatBytes(file.size)})</small>`)
+          .join("<br>");
+      }
+
+      function formatBytes(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      async function readFileRecord(file) {
+        const text = await file.text();
+        return {
+          fileName: file.name,
+          data: JSON.parse(text),
+        };
+      }
+
+      function readPastedRecords() {
+        const text = elements.pasteInput.value.trim();
+        if (!text) return [];
+        return [
+          {
+            fileName: "pasted-json",
+            data: JSON.parse(text),
+          },
+        ];
+      }
+
+      async function buildPayload() {
+        const records = [];
+        const sortedFiles = state.files.slice().sort((a, b) => a.name.localeCompare(b.name));
+
+        for (const file of sortedFiles) {
+          records.push(await readFileRecord(file));
+        }
+
+        records.push(...readPastedRecords());
+
+        if (!records.length) {
+          throw new Error("请先选择 JSON 文件，或粘贴 JSON 内容。");
+        }
+
+        const platform = elements.platform.value.trim() || "openai";
+        const accountType = elements.accountType.value.trim() || "oauth";
+        const concurrency = parseNonNegativeInt(elements.concurrency.value, "Concurrency");
+        const priority = parseNonNegativeInt(elements.priority.value, "Priority");
+        const nameSource = elements.nameSource.value;
+        const namePrefix = elements.namePrefix.value.trim() || "acc";
+        const accounts = [];
+        const usedNames = {};
+        let counter = 1;
+
+        for (const record of records) {
+          for (const item of normalizeRecords(record.data)) {
+            const credentials = item && typeof item === "object" && !Array.isArray(item) ? item : { raw_value: item };
+            const baseName = chooseName(credentials, record.fileName, counter, nameSource, namePrefix);
+            const name = dedupeName(baseName, usedNames);
+
+            accounts.push({
+              name,
+              platform,
+              type: accountType,
+              credentials,
+              concurrency,
+              priority,
+            });
+            counter += 1;
+          }
+        }
+
+        return {
+          type: "sub2api-data",
+          version: 1,
+          exported_at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+          proxies: [],
+          accounts,
+        };
+      }
+
+      function setDownload(jsonText) {
+        if (state.objectUrl) {
+          URL.revokeObjectURL(state.objectUrl);
+        }
+
+        const blob = new Blob([jsonText], { type: "application/json;charset=utf-8" });
+        state.objectUrl = URL.createObjectURL(blob);
+        const outputName = elements.outputName.value.trim() || "sub2api_accounts_import.json";
+        elements.download.href = state.objectUrl;
+        elements.download.download = outputName;
+        elements.download.classList.remove("disabled");
+        elements.download.setAttribute("aria-disabled", "false");
+        elements.copy.disabled = false;
+      }
+
+      function clearOutput() {
+        elements.result.value = "";
+        elements.resultBadge.textContent = "0 accounts";
+        elements.copy.disabled = true;
+        elements.download.classList.add("disabled");
+        elements.download.setAttribute("aria-disabled", "true");
+        elements.download.removeAttribute("href");
+        if (state.objectUrl) {
+          URL.revokeObjectURL(state.objectUrl);
+          state.objectUrl = null;
+        }
+      }
+
+      elements.chooseFiles.addEventListener("click", () => elements.fileInput.click());
+
+      elements.fileInput.addEventListener("change", (event) => {
+        state.files = Array.from(event.target.files || []);
+        refreshFileList();
+        setStatus(`已选择 ${state.files.length} 个文件。`);
+      });
+
+      elements.clearInput.addEventListener("click", () => {
+        state.files = [];
+        elements.fileInput.value = "";
+        elements.pasteInput.value = "";
+        refreshFileList();
+        setStatus("输入已清空。");
+      });
+
+      elements.clearOutput.addEventListener("click", () => {
+        clearOutput();
+        setStatus("输出已清空。");
+      });
+
+      elements.dropzone.addEventListener("dragover", (event) => {
+        event.preventDefault();
+        elements.dropzone.classList.add("active");
+      });
+
+      elements.dropzone.addEventListener("dragleave", () => {
+        elements.dropzone.classList.remove("active");
+      });
+
+      elements.dropzone.addEventListener("drop", (event) => {
+        event.preventDefault();
+        elements.dropzone.classList.remove("active");
+        state.files = Array.from(event.dataTransfer.files || []).filter((file) => /\.json$/i.test(file.name));
+        refreshFileList();
+        setStatus(`已拖入 ${state.files.length} 个 JSON 文件。`);
+      });
+
+      elements.build.addEventListener("click", async () => {
+        try {
+          setStatus("正在转换...");
+          clearOutput();
+          const payload = await buildPayload();
+          const jsonText = JSON.stringify(payload, null, 2);
+          elements.result.value = jsonText;
+          elements.resultBadge.textContent = `${payload.accounts.length} accounts`;
+          setDownload(jsonText);
+          setStatus(`转换完成：${payload.accounts.length} 个账号。`);
+        } catch (error) {
+          setStatus(error instanceof Error ? error.message : String(error), true);
+        }
+      });
+
+      elements.copy.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(elements.result.value);
+          setStatus("已复制到剪贴板。");
+        } catch (error) {
+          setStatus("复制失败，请手动选中结果复制。", true);
+        }
+      });
+
+      elements.download.addEventListener("click", (event) => {
+        if (elements.download.classList.contains("disabled")) {
+          event.preventDefault();
+        }
+      });
+
+      elements.loadExample.addEventListener("click", () => {
+        elements.pasteInput.value = JSON.stringify(
+          [
+            {
+              email: "demo@example.com",
+              access_token: "access-token-example",
+              refresh_token: "refresh-token-example",
+              account_id: "acct_demo",
+            },
+          ],
+          null,
+          2,
+        );
+        setStatus("示例 JSON 已加载，可以点击开始转换。");
+      });
+
+      window.addEventListener("beforeunload", () => {
+        if (state.objectUrl) {
+          URL.revokeObjectURL(state.objectUrl);
+        }
+      });
+    </script>
+  </body>
+</html>
