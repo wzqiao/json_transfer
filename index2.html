@@ -1,0 +1,397 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sub2Api Payload Builder</title>
+    <meta name="description" content="A static tool to convert token JSON to Sub2Api format.">
+    <style>
+      :root {
+        --bg: #ffffff;
+        --panel: #ffffff;
+        --border: #eaeaea;
+        --text-main: #000000;
+        --text-muted: #666666;
+        --primary: #000000;
+        --accent: #0070f3;
+        --error: #ff0000;
+        --code-bg: #fafafa;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        background-color: var(--bg);
+        color: var(--text-main);
+        line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      main {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 60px 24px;
+      }
+
+      header {
+        margin-bottom: 48px;
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 24px;
+      }
+
+      header h1 {
+        font-size: 32px;
+        font-weight: 700;
+        margin: 0 0 12px;
+        letter-spacing: -0.05em;
+      }
+
+      header p {
+        color: var(--text-muted);
+        font-size: 16px;
+        margin: 0;
+      }
+
+      .section-label {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+        display: block;
+      }
+
+      /* 配置区：网格布局 */
+      .config-section {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 20px;
+        margin-bottom: 40px;
+      }
+
+      .field { display: flex; flex-direction: column; gap: 6px; }
+
+      label { font-size: 13px; font-weight: 500; }
+
+      input, select, textarea {
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 10px 12px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+        background: #fff;
+      }
+
+      input:focus, select:focus, textarea:focus {
+        outline: none;
+        border-color: var(--text-main);
+      }
+
+      /* 拖拽上传区 */
+      .dropzone {
+        border: 1px dashed var(--border);
+        border-radius: 8px;
+        padding: 40px 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: var(--code-bg);
+        margin-bottom: 20px;
+      }
+
+      .dropzone:hover { border-color: var(--text-main); background: #f0f0f0; }
+      .dropzone strong { display: block; font-size: 15px; margin-bottom: 4px; }
+      .dropzone span { font-size: 13px; color: var(--text-muted); }
+
+      /* 左右对等布局 */
+      .workspace {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin-top: 20px;
+      }
+
+      .column-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+
+      .column-title h2 { font-size: 18px; margin: 0; font-weight: 600; }
+
+      .badge {
+        font-size: 11px;
+        background: #000;
+        color: #fff;
+        padding: 2px 8px;
+        border-radius: 12px;
+      }
+
+      .button-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 16px;
+      }
+
+      button, .btn-link {
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: 500;
+        border-radius: 6px;
+        cursor: pointer;
+        border: 1px solid var(--border);
+        background: white;
+        color: var(--text-main);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        transition: 0.2s;
+      }
+
+      button:hover { background: #fafafa; border-color: #000; }
+      button.primary { background: #000; color: #fff; border: none; }
+      button.primary:hover { background: #333; }
+
+      textarea.result-box {
+        background: #000;
+        color: #00ff41; /* 经典黑客绿预览 */
+        font-family: "Menlo", "Monaco", "Courier New", monospace;
+        font-size: 12px;
+        min-height: 450px;
+        border: none;
+        width: 100%;
+      }
+
+      .status-msg {
+        font-size: 13px;
+        margin-top: 12px;
+        min-height: 20px;
+      }
+      .error-msg { color: var(--error); font-weight: 600; }
+
+      footer {
+        margin-top: 80px;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        color: var(--text-muted);
+        font-size: 12px;
+        text-align: center;
+      }
+
+      @media (max-width: 800px) {
+        .workspace { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Sub2Api Builder</h1>
+        <p>静态、安全、本地化的 Token 转换工具</p>
+      </header>
+
+      <span class="section-label">1. 全局配置</span>
+      <section class="config-section">
+        <div class="field">
+          <label>平台 (Platform)</label>
+          <input id="platform" value="openai" />
+        </div>
+        <div class="field">
+          <label>类型 (Type)</label>
+          <input id="accountType" value="oauth" />
+        </div>
+        <div class="field">
+          <label>并发 (Concurrency)</label>
+          <input id="concurrency" type="number" value="3" />
+        </div>
+        <div class="field">
+          <label>权重 (Priority)</label>
+          <input id="priority" type="number" value="50" />
+        </div>
+        <div class="field">
+          <label>命名前缀</label>
+          <input id="namePrefix" value="acc" />
+        </div>
+        <div class="field">
+          <label>命名来源</label>
+          <select id="nameSource">
+            <option value="email">Email / ID</option>
+            <option value="filename">文件名</option>
+            <option value="index">自动索引</option>
+          </select>
+        </div>
+      </section>
+
+      <div class="workspace">
+        <div>
+          <div class="column-title">
+            <h2>输入源</h2>
+            <span id="inputBadge" class="badge">0</span>
+          </div>
+
+          <div id="dropzone" class="dropzone">
+            <strong>选择或拖拽 JSON 文件</strong>
+            <span>支持多文件批量导入</span>
+          </div>
+          <input id="fileInput" type="file" accept=".json" multiple hidden />
+
+          <textarea id="pasteInput" rows="10" placeholder="或者直接在此粘贴 JSON 数组..."></textarea>
+
+          <div class="button-row">
+            <button id="build" class="primary">开始转换</button>
+            <button id="loadExample">加载示例</button>
+            <button id="clearInput">清空输入</button>
+          </div>
+          <div id="status" class="status-msg"></div>
+        </div>
+
+        <div>
+          <div class="column-title">
+            <h2>输出预览</h2>
+            <span id="resultBadge" class="badge">0 items</span>
+          </div>
+          <textarea id="result" class="result-box" readonly placeholder="等待转换..."></textarea>
+          
+          <div class="button-row">
+            <button id="copy">复制到剪贴板</button>
+            <a id="download" class="btn-link" style="display:none">保存为 JSON</a>
+            <button id="clearOutput">重置结果</button>
+          </div>
+        </div>
+      </div>
+
+      <footer>
+        &copy; 2026 Sub2Api Tools &middot; 无服务器上传 &middot; 纯本地处理
+      </footer>
+    </main>
+
+    <script>
+      // 这里粘贴你原有的 JavaScript 逻辑代码，保持不变即可
+      // 只需要确保最后 setDownload 函数里更新下载按钮的 display 属性
+      // 例如：elements.download.style.display = 'inline-flex';
+      
+      const state = { files: [], objectUrl: null };
+      const $ = (id) => document.getElementById(id);
+      const elements = {
+        accountType: $("accountType"), build: $("build"), chooseFiles: $("dropzone"),
+        clearInput: $("clearInput"), clearOutput: $("clearOutput"), concurrency: $("concurrency"),
+        copy: $("copy"), download: $("download"), dropzone: $("dropzone"),
+        fileInput: $("fileInput"), inputBadge: $("inputBadge"), loadExample: $("loadExample"),
+        namePrefix: $("namePrefix"), nameSource: $("nameSource"), pasteInput: $("pasteInput"),
+        platform: $("platform"), priority: $("priority"), result: $("result"),
+        resultBadge: $("resultBadge"), status: $("status")
+      };
+
+      function setStatus(msg, isErr = false) {
+        elements.status.textContent = msg;
+        elements.status.className = isErr ? 'status-msg error-msg' : 'status-msg';
+      }
+
+      // 逻辑部分（简化版，对应你的原逻辑）
+      elements.chooseFiles.onclick = () => elements.fileInput.click();
+      elements.fileInput.onchange = (e) => {
+        state.files = Array.from(e.target.files);
+        elements.inputBadge.textContent = state.files.length;
+        setStatus(`已选择 ${state.files.length} 个文件`);
+      };
+
+      // 转换核心逻辑
+      elements.build.onclick = async () => {
+        try {
+          const accounts = [];
+          // 1. 处理文件
+          for (const f of state.files) {
+            const text = await f.text();
+            const data = JSON.parse(text);
+            const items = Array.isArray(data) ? data : [data];
+            items.forEach((item, idx) => {
+              accounts.push(createAccount(item, f.name, idx));
+            });
+          }
+          // 2. 处理粘贴
+          const paste = elements.pasteInput.value.trim();
+          if (paste) {
+            const data = JSON.parse(paste);
+            const items = Array.isArray(data) ? data : [data];
+            items.forEach((item, idx) => {
+              accounts.push(createAccount(item, "pasted", idx));
+            });
+          }
+
+          if (accounts.length === 0) throw new Error("没有检测到有效数据");
+
+          const payload = {
+            type: "sub2api-data",
+            version: 1,
+            exported_at: new Date().toISOString(),
+            proxies: [],
+            accounts
+          };
+
+          const jsonStr = JSON.stringify(payload, null, 2);
+          elements.result.value = jsonStr;
+          elements.resultBadge.textContent = `${accounts.length} items`;
+          
+          // 处理下载链接
+          if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
+          const blob = new Blob([jsonStr], { type: "application/json" });
+          state.objectUrl = URL.createObjectURL(blob);
+          elements.download.href = state.objectUrl;
+          elements.download.download = "sub2api_import.json";
+          elements.download.style.display = "inline-flex";
+
+          setStatus("转换成功！");
+        } catch (e) {
+          setStatus(e.message, true);
+        }
+      };
+
+      function createAccount(creds, fileName, idx) {
+        let name = elements.namePrefix.value + "-" + idx;
+        const source = elements.nameSource.value;
+        if (source === 'email' && (creds.email || creds.account_id)) {
+          name = creds.email || creds.account_id;
+        } else if (source === 'filename') {
+          name = fileName.replace('.json', '');
+        }
+
+        return {
+          name,
+          platform: elements.platform.value,
+          type: elements.accountType.value,
+          credentials: typeof creds === 'object' ? creds : { raw: creds },
+          concurrency: parseInt(elements.concurrency.value),
+          priority: parseInt(elements.priority.value)
+        };
+      }
+
+      elements.copy.onclick = () => {
+        navigator.clipboard.writeText(elements.result.value);
+        setStatus("已复制到剪贴板");
+      };
+
+      elements.loadExample.onclick = () => {
+        elements.pasteInput.value = JSON.stringify([{email: "user@example.com", token: "sk-xxxx"}], null, 2);
+      };
+      
+      elements.clearInput.onclick = () => {
+        state.files = [];
+        elements.fileInput.value = "";
+        elements.pasteInput.value = "";
+        elements.inputBadge.textContent = "0";
+        setStatus("输入已清空");
+      };
+
+      elements.clearOutput.onclick = () => {
+        elements.result.value = "";
+        elements.download.style.display = "none";
+        elements.resultBadge.textContent = "0 items";
+      };
+    </script>
+  </body>
+</html>
