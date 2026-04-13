@@ -73,9 +73,11 @@
         cursor: pointer;
         transition: 0.2s;
       }
-      .dropzone:hover, .dropzone.active { border-color: var(--text); background: #f9f9f9; }
+      /* 修复拖拽时的视觉反馈 */
+      .dropzone.active { border-color: var(--primary); background: #f0f7ff; }
+      .dropzone:hover { border-color: var(--text); background: #f9f9f9; }
       
-      .file-list { font-size: 12px; color: var(--muted); margin: 12px 0; padding: 10px; background: #fafafa; border-radius: 6px; min-height: 40px; }
+      .file-list { font-size: 12px; color: var(--muted); margin: 12px 0; padding: 10px; background: #fafafa; border-radius: 6px; min-height: 40px; line-height: 1.6; }
       .paste-area { min-height: 180px; font-family: monospace; }
       .result { background: var(--code-bg); color: #3fb950; font-family: monospace; font-size: 12px; min-height: 520px; padding: 20px; border: none; }
 
@@ -88,7 +90,7 @@
       button:hover { border-color: var(--text); background: #fafafa; }
       button.primary { background: #000; color: #fff; border: none; }
       button.success, .button.success { border-color: var(--success); color: var(--success); }
-      button:disabled { opacity: 0.4; cursor: not-allowed; }
+      button:disabled, .button.disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 
       .status { font-size: 12px; margin-top: 12px; font-weight: 500; color: var(--muted); }
       .status.error { color: var(--danger); }
@@ -122,11 +124,11 @@
         </div>
         <div class="field">
           <label for="concurrency">Concurrency</label>
-          <input id="concurrency" type="number" value="3" />
+          <input id="concurrency" type="number" min="0" value="3" />
         </div>
         <div class="field">
           <label for="priority">Priority</label>
-          <input id="priority" type="number" value="50" />
+          <input id="priority" type="number" min="0" value="50" />
         </div>
         <div class="field">
           <label for="nameSource">Name Source</label>
@@ -148,14 +150,14 @@
 
       <div class="grid">
         <div class="card">
-          <div class="title"><h2>输入数据</h2><span id="inputBadge" class="badge">0</span></div>
+          <div class="title"><h2>输入数据</h2><span id="inputBadge" class="badge">0 files</span></div>
           <div id="dropzone" class="dropzone"><strong>拖拽 JSON 到此处</strong><span>或点击下方选择文件</span></div>
           <div class="actions">
             <button id="chooseFiles">选择文件</button>
             <button id="clearInput">清空</button>
             <input id="fileInput" type="file" multiple hidden />
           </div>
-          <div id="fileList" class="file-list">等待导入...</div>
+          <div id="fileList" class="file-list">还没有选择文件。</div>
           <textarea id="pasteInput" class="paste-area" placeholder="或者直接粘贴 JSON 数组..."></textarea>
           <div class="actions">
             <button id="build" class="primary">开始转换</button>
@@ -165,11 +167,11 @@
         </div>
 
         <div class="card">
-          <div class="title"><h2>结果预览</h2><span id="resultBadge" class="badge">0</span></div>
+          <div class="title"><h2>结果预览</h2><span id="resultBadge" class="badge">0 accounts</span></div>
           <textarea id="result" class="result" readonly></textarea>
           <div class="actions">
             <button id="copy" class="success" disabled>复制</button>
-            <a id="download" class="button" style="display:none">保存文件</a>
+            <a id="download" class="button disabled" href="#">下载</a>
             <button id="clearOutput">重置</button>
           </div>
         </div>
@@ -177,76 +179,126 @@
     </main>
 
     <script>
-      // 逻辑完全保留，并修复了 format 的关联
+      /* 逻辑 100% 还原自源文件 */
       const state = { files: [], objectUrl: null };
       const $ = (id) => document.getElementById(id);
       const elements = {
-        format: $("format"), // 补上 format 引用
-        accountType: $("accountType"), build: $("build"), chooseFiles: $("chooseFiles"),
-        clearInput: $("clearInput"), clearOutput: $("clearOutput"), concurrency: $("concurrency"),
-        copy: $("copy"), download: $("download"), dropzone: $("dropzone"),
-        fileInput: $("fileInput"), fileList: $("fileList"), inputBadge: $("inputBadge"),
-        loadExample: $("loadExample"), namePrefix: $("namePrefix"), nameSource: $("nameSource"),
-        outputName: $("outputName"), pasteInput: $("pasteInput"), platform: $("platform"),
-        priority: $("priority"), result: $("result"), resultBadge: $("resultBadge"), status: $("status")
+        format: $("format"), accountType: $("accountType"), build: $("build"), 
+        chooseFiles: $("chooseFiles"), clearInput: $("clearInput"), clearOutput: $("clearOutput"), 
+        concurrency: $("concurrency"), copy: $("copy"), download: $("download"), 
+        dropzone: $("dropzone"), fileInput: $("fileInput"), fileList: $("fileList"), 
+        inputBadge: $("inputBadge"), loadExample: $("loadExample"), namePrefix: $("namePrefix"), 
+        nameSource: $("nameSource"), outputName: $("outputName"), pasteInput: $("pasteInput"), 
+        platform: $("platform"), priority: $("priority"), result: $("result"), 
+        resultBadge: $("resultBadge"), status: $("status")
       };
 
+      // 还原源文件的辅助工具函数
       function normalizeRecords(data) { return Array.isArray(data) ? data : [data]; }
       function stem(filename) { return filename.replace(/\.[^.]+$/, ""); }
+      function formatBytes(bytes) {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+      }
+      function escapeHtml(value) {
+        return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+      }
+      function setStatus(msg, isErr = false) { 
+        elements.status.textContent = msg; 
+        elements.status.classList.toggle("error", isErr); 
+      }
+      function refreshFileList() {
+        elements.inputBadge.textContent = `${state.files.length} files`;
+        if (!state.files.length) { elements.fileList.textContent = "还没有选择文件。"; return; }
+        elements.fileList.innerHTML = state.files.slice().sort((a,b) => a.name.localeCompare(b.name))
+          .map(f => `${escapeHtml(f.name)} <small>(${formatBytes(f.size)})</small>`).join("<br>");
+      }
+
+      // 核心业务逻辑 (1:1 还原)
       function chooseName(creds, fName, idx, src, pre) {
         if (src === "index") return `${pre}-${String(idx).padStart(3, "0")}`;
-        if (src === "email") { const m = creds.email || creds.account_id; if (m) return String(m).trim(); }
+        if (src === "email") {
+          const email = String(creds.email || "").trim(); if (email) return email;
+          const aid = String(creds.account_id || "").trim(); if (aid) return aid;
+        }
         return stem(fName);
       }
-      function dedupeName(name, used) { used[name] = (used[name] || 0) + 1; return used[name] === 1 ? name : `${name}-${used[name]}`; }
-      function setStatus(msg, isErr = false) { elements.status.textContent = msg; elements.status.className = isErr ? "status error" : "status"; }
-      
+      function dedupeName(name, used) {
+        used[name] = (used[name] || 0) + 1;
+        return used[name] === 1 ? name : `${name}-${used[name]}`;
+      }
       async function buildPayload() {
         const records = [];
-        for (const f of state.files) { records.push({ fileName: f.name, data: JSON.parse(await f.text()) }); }
-        const pStr = elements.pasteInput.value.trim();
-        if (pStr) records.push({ fileName: "pasted", data: JSON.parse(pStr) });
-        if (!records.length) throw new Error("请先提供数据");
+        const sorted = state.files.slice().sort((a,b) => a.name.localeCompare(b.name));
+        for (const f of sorted) { records.push({ fileName: f.name, data: JSON.parse(await f.text()) }); }
+        const paste = elements.pasteInput.value.trim();
+        if (paste) records.push({ fileName: "pasted-json", data: JSON.parse(paste) });
+        if (!records.length) throw new Error("请先选择 JSON 文件，或粘贴 JSON 内容。");
 
         const accounts = [];
-        const used = {};
-        let count = 1;
+        const usedNames = {};
+        let counter = 1;
         for (const r of records) {
           for (const item of normalizeRecords(r.data)) {
-            const creds = item && typeof item === "object" ? item : { raw: item };
-            const name = dedupeName(chooseName(creds, r.fileName, count++, elements.nameSource.value, elements.namePrefix.value), used);
+            const creds = item && typeof item === "object" && !Array.isArray(item) ? item : { raw_value: item };
+            const name = dedupeName(chooseName(creds, r.fileName, counter, elements.nameSource.value, elements.namePrefix.value), usedNames);
             accounts.push({
-              name, platform: elements.platform.value, type: elements.accountType.value,
+              name, platform: elements.platform.value.trim() || "openai", type: elements.accountType.value.trim() || "oauth",
               credentials: creds, concurrency: parseInt(elements.concurrency.value), priority: parseInt(elements.priority.value)
             });
+            counter++;
           }
         }
         return { 
-          type: elements.format.value + "-data", // 动态获取格式名
-          version: 1, exported_at: new Date().toISOString(), proxies: [], accounts 
+          type: elements.format.value + "-data", 
+          version: 1, exported_at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"), 
+          proxies: [], accounts 
         };
       }
 
+      // 修复下载和结果展示
+      function setDownload(jsonText) {
+        if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
+        state.objectUrl = URL.createObjectURL(new Blob([jsonText], { type: "application/json;charset=utf-8" }));
+        elements.download.href = state.objectUrl;
+        elements.download.download = elements.outputName.value.trim() || "export.json";
+        elements.download.classList.remove("disabled");
+        elements.copy.disabled = false;
+      }
+      function clearOutput() {
+        elements.result.value = ""; elements.resultBadge.textContent = "0 accounts";
+        elements.copy.disabled = true; elements.download.classList.add("disabled");
+        if (state.objectUrl) { URL.revokeObjectURL(state.objectUrl); state.objectUrl = null; }
+      }
+
+      // 事件监听 (补全拖拽部分)
       elements.chooseFiles.onclick = () => elements.fileInput.click();
-      elements.fileInput.onchange = (e) => { state.files = Array.from(e.target.files); elements.inputBadge.textContent = state.files.length; elements.fileList.textContent = state.files.map(f => f.name).join(", "); };
+      elements.fileInput.onchange = (e) => { state.files = Array.from(e.target.files || []); refreshFileList(); setStatus(`已选择 ${state.files.length} 个文件。`); };
+      
+      elements.dropzone.addEventListener("dragover", (e) => { e.preventDefault(); elements.dropzone.classList.add("active"); });
+      elements.dropzone.addEventListener("dragleave", () => { elements.dropzone.classList.remove("active"); });
+      elements.dropzone.addEventListener("drop", (e) => {
+        e.preventDefault(); elements.dropzone.classList.remove("active");
+        const dropped = Array.from(e.dataTransfer.files || []).filter(f => /\.json$/i.test(f.name));
+        state.files = dropped; refreshFileList(); setStatus(`已拖入 ${state.files.length} 个 JSON 文件。`);
+      });
+
       elements.build.onclick = async () => {
         try {
+          setStatus("正在转换..."); clearOutput();
           const payload = await buildPayload();
-          const json = JSON.stringify(payload, null, 2);
-          elements.result.value = json;
-          elements.resultBadge.textContent = payload.accounts.length;
-          if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
-          state.objectUrl = URL.createObjectURL(new Blob([json], { type: "application/json" }));
-          elements.download.href = state.objectUrl;
-          elements.download.download = elements.outputName.value || "export.json";
-          elements.download.style.display = "inline-flex";
-          elements.copy.disabled = false;
-          setStatus("成功转换");
-        } catch (e) { setStatus(e.message, true); }
+          const jsonText = JSON.stringify(payload, null, 2);
+          elements.result.value = jsonText;
+          elements.resultBadge.textContent = `${payload.accounts.length} accounts`;
+          setDownload(jsonText); setStatus(`转换完成：${payload.accounts.length} 个账号。`);
+        } catch (error) { setStatus(error.message, true); }
       };
-      elements.copy.onclick = () => { navigator.clipboard.writeText(elements.result.value); setStatus("已复制"); };
-      elements.loadExample.onclick = () => { elements.pasteInput.value = JSON.stringify([{ email: "demo@test.com", token: "abc" }], null, 2); };
-      elements.clearInput.onclick = () => { state.files = []; elements.pasteInput.value = ""; elements.inputBadge.textContent = "0"; elements.fileList.textContent = "等待导入..."; };
+
+      elements.copy.onclick = async () => { try { await navigator.clipboard.writeText(elements.result.value); setStatus("已复制到剪贴板。"); } catch (e) { setStatus("复制失败", true); } };
+      elements.clearInput.onclick = () => { state.files = []; elements.fileInput.value = ""; elements.pasteInput.value = ""; refreshFileList(); setStatus("输入已清空。"); };
+      elements.clearOutput.onclick = () => { clearOutput(); setStatus("输出已清空。"); };
+      elements.loadExample.onclick = () => { elements.pasteInput.value = JSON.stringify([{ email: "demo@example.com", access_token: "token-demo" }], null, 2); setStatus("示例已加载。"); };
     </script>
   </body>
 </html>
